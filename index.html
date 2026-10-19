@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suara Cerdik - BM Tingkatan 4 (Alam Sekitar)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes pulse-ring { 0%{transform:scale(.95);opacity:.8} 50%{transform:scale(1.15);opacity:.4} 100%{transform:scale(.95);opacity:.8} }
+    .recording-pulse { animation:pulse-ring 1.5s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-emerald-50 text-slate-800 min-h-screen flex flex-col font-sans pb-10">
+<header class="bg-emerald-700 text-white shadow-md sticky top-0 z-50">
+  <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+    <div class="flex items-center space-x-2">
+      <i data-lucide="leaf" class="w-6 h-6 text-emerald-300"></i>
+      <div><h1 class="text-lg font-bold leading-tight">Suara Cerdik</h1><p class="text-xs text-emerald-200">BM Tingkatan 4 • Tema Alam Sekitar</p></div>
+    </div>
+    <div class="flex space-x-1 bg-emerald-800 p-1 rounded-xl text-xs">
+      <button id="tabMurid" onclick="tukarMod('murid')" class="px-3 py-1.5 rounded-lg font-semibold bg-white text-emerald-800 shadow">Murid</button>
+      <button id="tabGuru" onclick="tukarMod('guru')" class="px-3 py-1.5 rounded-lg font-semibold text-emerald-200">Guru</button>
+    </div>
+  </div>
+</header>
+<main class="max-w-md mx-auto w-full px-4 pt-4 flex-1">
+  <section id="bahagianMurid" class="space-y-4">
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-emerald-100">
+      <label for="pilihSoalan" class="block text-xs font-bold text-slate-500 uppercase mb-1">Pilih soalan:</label>
+      <select id="pilihSoalan" onchange="muatSoalanSemasa()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm"></select>
+    </div>
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-emerald-100">
+      <span id="kategoriSoalan" class="inline-block px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full mb-2">Tema: Alam Sekitar</span>
+      <h2 id="teksSoalan" class="text-base font-bold leading-snug">Memuatkan soalan...</h2>
+    </div>
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-emerald-100 text-center">
+      <p class="text-xs text-slate-500 mb-3">Tekan butang mikrofon dan bacakan jawapan anda dalam Bahasa Melayu.</p>
+      <div class="relative flex justify-center items-center my-3">
+        <div id="micRing" class="absolute w-20 h-20 rounded-full bg-emerald-200 hidden"></div>
+        <button id="btnMic" onclick="kawalanMikrofon()" class="relative z-10 w-16 h-16 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg">
+          <i id="micIcon" data-lucide="mic" class="w-7 h-7"></i>
+        </button>
+      </div>
+      <p id="statusMic" class="text-xs font-semibold text-slate-600 mt-2">Tekan mikrofon untuk mula menjawab</p>
+      <div class="mt-4 text-left">
+        <label class="block text-xs font-bold text-slate-500 mb-1">Teks dituturkan:</label>
+        <div id="teksTranskrip" class="min-h-[70px] p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 italic">(Pertuturan anda akan dipaparkan di sini...)</div>
+      </div>
+      <button id="btnNilai" onclick="nilaiJawapan()" disabled class="mt-4 w-full bg-emerald-600 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl shadow flex items-center justify-center space-x-2">
+        <i data-lucide="check-circle" class="w-5 h-5"></i><span>Nilai Jawapan Saya</span>
+      </button>
+      <p class="text-xs text-slate-400 mt-2">Nota: Penilaian automatik ialah bantuan pembelajaran dan perlu disemak oleh guru.</p>
+    </div>
+    <div id="kadKeputusan" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-emerald-100">
+      <div class="mb-3"><span id="badgeKeputusan" class="px-3 py-1 rounded-full text-xs font-extrabold uppercase"></span></div>
+      <h4 class="text-xs font-bold text-slate-500 uppercase mb-2">Ulasan penilaian:</h4>
+      <p id="sebabPenilaian" class="text-sm leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100"></p>
+    </div>
+  </section>
+
+  <section id="bahagianGuru" class="hidden space-y-4">
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-emerald-100">
+      <h3 class="text-sm font-bold mb-2">Enjin Penilaian</h3>
+      <p class="text-xs text-slate-500 mb-3">Secara lalai, aplikasi menggunakan padanan kata kunci tempatan. Pilihan Gemini memerlukan API key dan sambungan internet. Jangan gunakan API key peribadi dalam laman awam.</p>
+      <label class="block text-xs font-bold mb-1" for="geminiApiKey">Gemini API key (pilihan):</label>
+      <input type="password" id="geminiApiKey" placeholder="Masukkan API key jika perlu" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+    </div>
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-emerald-100">
+      <h3 class="text-sm font-bold mb-3">Tambah soalan dan skema</h3>
+      <form id="formTambahSoalan" onsubmit="tambahSoalan(event)" class="space-y-3">
+        <div><label class="block text-xs font-semibold mb-1" for="inputKategori">Tajuk / kategori:</label><input id="inputKategori" required class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl" placeholder="Contoh: Punca pencemaran"></div>
+        <div><label class="block text-xs font-semibold mb-1" for="inputSoalan">Teks soalan:</label><textarea id="inputSoalan" rows="2" required class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl" placeholder="Masukkan soalan"></textarea></div>
+        <div><label class="block text-xs font-semibold mb-1" for="inputSkema">Skema jawapan / isi penting:</label><textarea id="inputSkema" rows="3" required class="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl" placeholder="Masukkan isi penting"></textarea></div>
+        <button type="submit" class="w-full bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm">Simpan soalan</button>
+      </form>
+    </div>
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-emerald-100">
+      <div class="flex justify-between items-center mb-3"><h3 class="text-sm font-bold">Senarai soalan (<span id="jumlahSoalan">0</span>)</h3><button onclick="tetapSemulaSoalan()" class="text-xs text-rose-600">Reset soalan asal</button></div>
+      <div id="senaraiSoalanGuru" class="space-y-3"></div>
+    </div>
+  </section>
+</main>
+<script>
+const SOALAN_ASAL = [
+ {id:"soalan-1",kategori:"Punca Pencemaran",soalan:"Jelaskan dua punca utama berlakunya pencemaran sungai di negara kita.",skema:"Pelepasan sisa industri toksik atau bahan kimia dari kilang tanpa dirawat. Pembuangan sampah sarap dan sisa domestik oleh masyarakat atau perumahan ke dalam longkang dan anak sungai. Sisa aktiviti pertanian dan penternakan yang mengalir ke sungai."},
+ {id:"soalan-2",kategori:"Langkah Penjagaan Alam",soalan:"Nyatakan langkah praktikal yang boleh diamalkan oleh individu bagi mengurangkan penggunaan beg plastik.",skema:"Membawa beg mesra alam atau beg kitar semula sendiri semasa membeli-belah. Menolak beg plastik di kaunter bayaran. Menggunakan bakul atau kotak terpakai untuk mengisi barangan runcit."},
+ {id:"soalan-3",kategori:"Kepentingan Kelestarian",soalan:"Mengapakah pengekalan dan kelestarian hutan amat penting kepada kestabilan ekosistem?",skema:"Mengekalkan habitat semula jadi bagi flora dan fauna agar tidak pupus. Berfungsi sebagai kawasan tadahan air semula jadi untuk bekalan air bersih. Menyerap gas karbon dioksida dan membekalkan oksigen sekali gus mengawal pemanasan global."}
+];
+let senaraiSoalan = bacaSoalanTersimpan();
+let soalanSemasaIndex = 0, teksTercatat = "", pengecaman = null, sedangMerakam = false;
+function bacaSoalanTersimpan(){ try { const x=JSON.parse(localStorage.getItem("suara_cerdik_soalan")); return Array.isArray(x)&&x.length?x:SOALAN_ASAL.map(x=>({...x})); } catch(e){ return SOALAN_ASAL.map(x=>({...x})); } }
+window.addEventListener("DOMContentLoaded",()=>{ if(window.lucide) lucide.createIcons(); kemaskiniSenaraiSoalanPilihan(); muatSoalanSemasa(); paparkanSenaraiGuru(); });
+function tukarMod(mod){
+ const murid=document.getElementById("bahagianMurid"), guru=document.getElementById("bahagianGuru"), tm=document.getElementById("tabMurid"), tg=document.getElementById("tabGuru");
+ murid.classList.toggle("hidden",mod!=="murid"); guru.classList.toggle("hidden",mod!=="guru");
+ tm.className=mod==="murid"?"px-3 py-1.5 rounded-lg font-semibold bg-white text-emerald-800 shadow":"px-3 py-1.5 rounded-lg font-semibold text-emerald-200";
+ tg.className=mod==="guru"?"px-3 py-1.5 rounded-lg font-semibold bg-white text-emerald-800 shadow":"px-3 py-1.5 rounded-lg font-semibold text-emerald-200";
+ if(mod==="murid"){kemaskiniSenaraiSoalanPilihan();muatSoalanSemasa();} else paparkanSenaraiGuru();
+ if(window.lucide) lucide.createIcons();
+}
+function kemaskiniSenaraiSoalanPilihan(){
+ const d=document.getElementById("pilihSoalan"); d.innerHTML="";
+ senaraiSoalan.forEach((s,i)=>{const o=document.createElement("option");o.value=i;o.textContent=`Soalan ${i+1}: ${s.kategori}`;d.appendChild(o);});
+ d.value=String(Math.min(soalanSemasaIndex,Math.max(0,senaraiSoalan.length-1)));
+}
+function muatSoalanSemasa(){
+ const d=document.getElementById("pilihSoalan"); soalanSemasaIndex=parseInt(d.value,10)||0; const s=senaraiSoalan[soalanSemasaIndex]; if(!s)return;
+ document.getElementById("kategoriSoalan").textContent="Tema: "+s.kategori; document.getElementById("teksSoalan").textContent=s.soalan;
+ teksTercatat=""; document.getElementById("teksTranskrip").textContent="(Pertuturan anda akan dipaparkan di sini...)"; document.getElementById("btnNilai").disabled=true; document.getElementById("kadKeputusan").classList.add("hidden");
+}
+function tambahSoalan(e){
+ e.preventDefault(); const item={id:"soalan-"+Date.now(),kategori:document.getElementById("inputKategori").value.trim(),soalan:document.getElementById("inputSoalan").value.trim(),skema:document.getElementById("inputSkema").value.trim()};
+ senaraiSoalan.push(item); simpanSoalan(); e.target.reset(); kemaskiniSenaraiSoalanPilihan(); paparkanSenaraiGuru(); alert("Soalan berjaya disimpan dalam pelayar ini.");
+}
+function simpanSoalan(){localStorage.setItem("suara_cerdik_soalan",JSON.stringify(senaraiSoalan));}
+function padamSoalan(i){if(senaraiSoalan.length<=1){alert("Sekurang-kurangnya satu soalan perlu ada.");return;}if(confirm("Padam soalan ini?")){senaraiSoalan.splice(i,1);soalanSemasaIndex=0;simpanSoalan();kemaskiniSenaraiSoalanPilihan();muatSoalanSemasa();paparkanSenaraiGuru();}}
+function tetapSemulaSoalan(){if(confirm("Kembalikan kepada tiga soalan asal?")){senaraiSoalan=SOALAN_ASAL.map(x=>({...x}));soalanSemasaIndex=0;simpanSoalan();kemaskiniSenaraiSoalanPilihan();muatSoalanSemasa();paparkanSenaraiGuru();}}
+function paparkanSenaraiGuru(){
+ document.getElementById("jumlahSoalan").textContent=senaraiSoalan.length; const bekas=document.getElementById("senaraiSoalanGuru");bekas.innerHTML="";
+ senaraiSoalan.forEach((s,i)=>{const kad=document.createElement("div");kad.className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs";
+ const tajuk=document.createElement("div");tajuk.className="font-bold text-emerald-800";tajuk.textContent=`Soalan ${i+1}: ${s.kategori}`;
+ const soalan=document.createElement("p");soalan.className="font-semibold";soalan.textContent=s.soalan;
+ const skema=document.createElement("p");skema.className="text-slate-600";skema.textContent="Skema: "+s.skema;
+ const btn=document.createElement("button");btn.className="text-rose-600";btn.textContent="Padam";btn.onclick=()=>padamSoalan(i);
+ kad.append(tajuk,soalan,skema,btn);bekas.appendChild(kad);
+ });
+}
+const SpeechRecognitionAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
+function kawalanMikrofon(){if(!SpeechRecognitionAPI){alert("Pelayar ini tidak menyokong pengecaman suara. Cuba Google Chrome pada komputer atau Android. Sokongan Safari/iPhone mungkin berbeza.");return;}if(sedangMerakam){try{pengecaman.stop();}catch(e){}return;}mulakanRakaman();}
+function mulakanRakaman(){
+ try{
+  pengecaman=new SpeechRecognitionAPI();pengecaman.lang="ms-MY";pengecaman.continuous=false;pengecaman.interimResults=true;
+  pengecaman.onstart=()=>{sedangMerakam=true;document.getElementById("statusMic").textContent="Sedang mendengar... Sila bercakap.";document.getElementById("statusMic").className="text-xs font-semibold text-rose-600 mt-2 animate-pulse";document.getElementById("micRing").classList.remove("hidden");document.getElementById("micRing").classList.add("recording-pulse");document.getElementById("btnMic").classList.replace("bg-emerald-600","bg-rose-600");};
+  pengecaman.onresult=e=>{let t="";for(let i=e.resultIndex;i<e.results.length;i++)t+=e.results[i][0].transcript;teksTercatat=t.trim();document.getElementById("teksTranskrip").textContent=teksTercatat||"(Mendengar...)";document.getElementById("btnNilai").disabled=teksTercatat.length<4;};
+  pengecaman.onerror=e=>{document.getElementById("statusMic").textContent="Mikrofon tidak dapat digunakan ("+e.error+"). Semak kebenaran mikrofon dan cuba lagi.";kemasStatusMic();};
+  pengecaman.onend=()=>{sedangMerakam=false;kemasStatusMic();};
+  pengecaman.start();
+ }catch(e){sedangMerakam=false;alert("Tidak dapat memulakan mikrofon. Pastikan laman dibuka melalui HTTPS dan kebenaran mikrofon dibenarkan.");}
+}
+function kemasStatusMic(){document.getElementById("micRing").classList.add("hidden");document.getElementById("micRing").classList.remove("recording-pulse");document.getElementById("btnMic").classList.remove("bg-rose-600");document.getElementById("btnMic").classList.add("bg-emerald-600");document.getElementById("statusMic").className="text-xs font-semibold text-emerald-700 mt-2";if(teksTercatat)document.getElementById("statusMic").textContent="Pengecaman selesai. Tekan 'Nilai Jawapan Saya'.";}
+async function nilaiJawapan(){
+ const jawapan=teksTercatat.trim();if(!jawapan){alert("Sila rakam jawapan dahulu.");return;}
+ const s=senaraiSoalan[soalanSemasaIndex],btn=document.getElementById("btnNilai");btn.disabled=true;btn.textContent="Menilai jawapan...";
+ let hasil=nilaiSemantikTempatan(s.skema,jawapan);
+ const apiKey=document.getElementById("geminiApiKey").value.trim();
+ if(apiKey){try{hasil=await nilaiDenganGemini(apiKey,s.soalan,s.skema,jawapan);}catch(e){console.warn(e);alert("Penilaian Gemini gagal. Sistem menggunakan penilaian kata kunci tempatan.");}}
+ btn.disabled=false;btn.innerHTML='<i data-lucide="check-circle" class="w-5 h-5"></i><span>Nilai Jawapan Saya</span>';if(window.lucide)lucide.createIcons();paparkanKeputusan(hasil);
+}
+function nilaiSemantikTempatan(skema,jawapan){
+ const teks=jawapan.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\p{L}\p{N}\s]/gu," ");
+ const kumpulan=[
+  ["kilang","industri","toksik","kimia","bahan kimia","sisa industri"],
+  ["sampah","sarap","domestik","plastik","longkang","penduduk","masyarakat"],
+  ["baja","racun","pertanian","ladang","ternakan"],
+  ["beg mesra alam","kitar semula","beg sendiri","beg kain","guna semula","bakul","kotak"],
+  ["tolak","tidak mahu","elak plastik","jangan guna plastik","kurangkan plastik"],
+  ["habitat","haiwan","tumbuhan","flora","fauna","spesies","pupus","ekosistem","keseimbangan"],
+  ["tadahan air","bekalan air","sumber air","air bersih"],
+  ["karbon dioksida","karbon","oksigen","pemanasan global","suhu","udara bersih"]
+ ];
+ const konsep=kumpulan.filter(k=>k.some(v=>skema.toLowerCase().includes(v)));
+ const padan=konsep.filter(k=>k.some(v=>teks.includes(v)));
+ const bil=teks.split(/\s+/).filter(Boolean).length;
+ if(bil<4)return{status:"Cuba lagi",sebab:"Jawapan terlalu ringkas. Berikan penjelasan yang lebih jelas."};
+ const nisbah=konsep.length?padan.length/konsep.length:0;
+ if(nisbah>=0.45||padan.length>=2)return{status:"Jawapan betul",sebab:"Jawapan anda mempunyai beberapa isi yang sepadan dengan skema: "+padan.map(k=>k.find(v=>teks.includes(v))).join(", ")+". Semak semula sama ada semua isi yang diminta telah dijelaskan."};
+ if(padan.length>0||bil>=10)return{status:"Jawapan belum lengkap",sebab:"Jawapan anda mungkin mengandungi idea yang berkaitan, tetapi isi penting masih perlu ditambah berdasarkan skema jawapan."};
+ return{status:"Cuba lagi",sebab:"Jawapan belum menunjukkan isi utama yang dikehendaki. Cuba fikirkan punca, langkah atau kepentingan yang berkaitan dengan soalan."};
+}
+async function nilaiDenganGemini(apiKey,soalan,skema,jawapan){
+ const url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+encodeURIComponent(apiKey);
+ const prompt=`Anda pemeriksa Bahasa Melayu Tingkatan 4. Nilai makna jawapan murid berdasarkan skema, terima ayat sendiri yang membawa maksud sama.\nSoalan: ${soalan}\nSkema: ${skema}\nJawapan murid: ${jawapan}\nBalas JSON sahaja dengan format {"status":"Jawapan betul" atau "Jawapan belum lengkap" atau "Cuba lagi","sebab":"ulasan ringkas dalam Bahasa Melayu"}.`;
+ const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json"}})});
+ if(!r.ok)throw new Error("Permintaan Gemini gagal: "+r.status);
+ const data=await r.json();const text=data.candidates?.[0]?.content?.parts?.[0]?.text;if(!text)throw new Error("Tiada keputusan daripada Gemini.");
+ const result=JSON.parse(text);if(!["Jawapan betul","Jawapan belum lengkap","Cuba lagi"].includes(result.status)||!result.sebab)throw new Error("Format keputusan tidak sah.");return result;
+}
+function paparkanKeputusan(hasil){
+ const kad=document.getElementById("kadKeputusan"),badge=document.getElementById("badgeKeputusan");kad.classList.remove("hidden");document.getElementById("sebabPenilaian").textContent=hasil.sebab;
+ const kelas={"Jawapan betul":"bg-emerald-100 text-emerald-800 border border-emerald-300","Jawapan belum lengkap":"bg-amber-100 text-amber-800 border border-amber-300","Cuba lagi":"bg-rose-100 text-rose-800 border border-rose-300"};
+ badge.textContent=hasil.status;badge.className="px-3 py-1 rounded-full text-xs font-extrabold uppercase "+(kelas[hasil.status]||kelas["Cuba lagi"]);kad.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+</script>
+</body>
+</html>
